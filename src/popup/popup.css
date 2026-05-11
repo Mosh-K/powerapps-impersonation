@@ -1,0 +1,184 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: #0078d4;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  width: 320px;
+  background: #fff;
+  color: #1f1f1f;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 60px;
+}
+
+header {
+  background: #0078d4;
+  padding: 10px 14px;
+}
+
+.header-title {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.state {
+  padding: 14px;
+}
+
+.status-message {
+  color: #605e5c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.search-wrapper {
+  padding: 10px 14px 6px;
+}
+
+.search-wrapper input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #c8c6c4;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  color: #1f1f1f;
+}
+
+.search-wrapper input:focus {
+  border-color: #0078d4;
+  box-shadow: 0 0 0 1px #0078d4;
+}
+
+.search-wrapper input::placeholder {
+  color: #a19f9d;
+}
+
+#search-results {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.result-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f2f1;
+  transition: background 0.1s;
+}
+
+.result-item:hover {
+  background: #f3f2f1;
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-name {
+  font-weight: 500;
+  color: #1f1f1f;
+}
+
+.result-email {
+  color: #605e5c;
+  font-size: 11px;
+  margin-top: 1px;
+}
+
+.results-empty {
+  padding: 10px 14px;
+  color: #a19f9d;
+  font-size: 12px;
+}
+
+.results-loading {
+  padding: 10px 14px;
+  color: #605e5c;
+  font-size: 12px;
+}
+
+.status-error {
+  color: #a4262c;
+}
+
+.results-error {
+  padding: 10px 14px;
+  color: #a4262c;
+  font-size: 12px;
+}
+
+#active-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #deecf9;
+  border-top: 1px solid #c7e0f4;
+}
+
+.active-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.active-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0078d4;
+  margin-bottom: 1px;
+}
+
+.active-name {
+  font-weight: 600;
+  color: #1f1f1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-email {
+  font-size: 11px;
+  color: #605e5c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #605e5c;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  line-height: 1;
+}
+
+#clear-btn:hover {
+  background: #c7e0f4;
+  color: #1f1f1f;
+}
