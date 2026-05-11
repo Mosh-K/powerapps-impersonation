@@ -73,6 +73,11 @@ header {
 #search-results {
   max-height: 220px;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.result-item.selected {
+  background: #e1effa;
 }
 
 .result-item {
@@ -167,11 +172,11 @@ header {
 
 #clear-btn {
   background: none;
-  border: none;
+  border: 1px solid #c7e0f4;
   cursor: pointer;
-  color: #605e5c;
+  color: #a4262c;
   font-size: 14px;
-  padding: 4px 6px;
+  padding: 4px 8px;
   border-radius: 3px;
   flex-shrink: 0;
   margin-left: 8px;
@@ -179,6 +184,7 @@ header {
 }
 
 #clear-btn:hover {
-  background: #c7e0f4;
-  color: #1f1f1f;
+  background: #a4262c;
+  border-color: #a4262c;
+  color: #fff;
 }

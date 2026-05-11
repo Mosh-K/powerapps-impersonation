@@ -9,7 +9,8 @@ export interface User {
 export interface TabStateEntry {
   orgBaseUrl: string | null
   hasPrivilege: boolean | null
-  impersonation: User | null
+  unauthenticated: boolean
+  impersonated: User | null
   currentUser: User | null
 }
 
@@ -20,4 +21,4 @@ export type BackgroundMessage =
   | { type: 'CLEAR_IMPERSONATION'; tabId: number }
 
 export type PopupMessage =
-  | { type: 'PRIVILEGE_CHECKED'; tabId: number; orgBaseUrl: string | null; hasPrivilege: boolean; currentUser: User | null }
+  | { type: 'PRIVILEGE_CHECKED'; tabId: number; orgBaseUrl: string | null; hasPrivilege: boolean; unauthenticated: boolean; currentUser: User | null }

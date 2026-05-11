@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PowerApps Impersonation",
   "version": "1.0.0",
-  "description": "Impersonate Dataverse users in PowerApps and Dynamics 365",
+  "description": "Impersonate Dataverse users in PowerApps and Dynamics",
   "permissions": [
     "webRequest",
     "declarativeNetRequestWithHostAccess",
@@ -10,7 +10,7 @@
     "tabs"
   ],
   "host_permissions": [
-    "*://*.powerapps.com/*",
+    "*://apps.powerapps.com/*",
     "*://*.dynamics.com/*"
   ],
   "background": {

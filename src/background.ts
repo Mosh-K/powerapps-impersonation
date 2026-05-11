@@ -2,6 +2,19 @@ import type { User, TabStateEntry, BackgroundMessage } from './types'
 
 const tabState = new Map<number, TabStateEntry>()
 
+// Restore persisted state when the service worker restarts
+chrome.storage.session.get(null).then(items => {
+  for (const [key, value] of Object.entries(items)) {
+    const tabId = parseInt(key)
+    if (!isNaN(tabId)) tabState.set(tabId, value as TabStateEntry)
+  }
+}).catch(() => {})
+
+function saveState(tabId: number, entry: TabStateEntry) {
+  tabState.set(tabId, entry)
+  chrome.storage.session.set({ [String(tabId)]: entry }).catch(() => {})
+}
+
 chrome.webRequest.onBeforeRequest.addListener(
   (details) => {
     if (details.tabId < 0) return
@@ -11,9 +24,9 @@ chrome.webRequest.onBeforeRequest.addListener(
     const { protocol, hostname } = new URL(details.url)
     const orgBaseUrl = `${protocol}//${hostname}`
 
-    tabState.set(details.tabId, { ...(state ?? emptyState()), orgBaseUrl })
+    saveState(details.tabId, { ...(state ?? emptyState()), orgBaseUrl })
 
-    if (!state?.impersonation) {
+    if (!state?.impersonated) {
       checkPrivilege(orgBaseUrl, details.tabId)
     }
   },
@@ -23,17 +36,18 @@ chrome.webRequest.onBeforeRequest.addListener(
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status !== 'loading') return
   const state = tabState.get(tabId)
-  if (!state?.impersonation) return
-  chrome.action.setBadgeText({ text: getInitials(state.impersonation), tabId })
+  if (!state?.impersonated) return
+  chrome.action.setBadgeText({ text: getInitials(state.impersonated), tabId })
   chrome.action.setBadgeBackgroundColor({ color: '#d83b01', tabId })
 })
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const state = tabState.get(tabId)
-  if (state?.impersonation) {
+  if (state?.impersonated) {
     await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [tabId] }).catch(() => {})
   }
   tabState.delete(tabId)
+  chrome.storage.session.remove(String(tabId)).catch(() => {})
 })
 
 chrome.runtime.onMessage.addListener((message: BackgroundMessage, _sender, sendResponse) => {
@@ -62,7 +76,7 @@ chrome.runtime.onMessage.addListener((message: BackgroundMessage, _sender, sendR
 })
 
 function emptyState(): TabStateEntry {
-  return { orgBaseUrl: null, hasPrivilege: null, impersonation: null, currentUser: null }
+  return { orgBaseUrl: null, hasPrivilege: null, unauthenticated: false, impersonated: null, currentUser: null }
 }
 
 async function dataverseGet(orgBaseUrl: string, path: string) {
@@ -101,14 +115,15 @@ async function checkPrivilege(orgBaseUrl: string, tabId: number) {
     }
 
     const state = tabState.get(tabId) ?? emptyState()
-    tabState.set(tabId, { ...state, hasPrivilege, currentUser })
+    saveState(tabId, { ...state, hasPrivilege, unauthenticated: false, currentUser })
 
-    chrome.runtime.sendMessage({ type: 'PRIVILEGE_CHECKED', tabId, orgBaseUrl, hasPrivilege, currentUser }).catch(() => {})
-  } catch {
+    chrome.runtime.sendMessage({ type: 'PRIVILEGE_CHECKED', tabId, orgBaseUrl, hasPrivilege, unauthenticated: false, currentUser }).catch(() => {})
+  } catch (err) {
+    const unauthenticated = err instanceof Error && err.message === 'HTTP 401'
     const state = tabState.get(tabId) ?? emptyState()
-    tabState.set(tabId, { ...state, hasPrivilege: false })
+    saveState(tabId, { ...state, hasPrivilege: false, unauthenticated })
 
-    chrome.runtime.sendMessage({ type: 'PRIVILEGE_CHECKED', tabId, orgBaseUrl, hasPrivilege: false, currentUser: null }).catch(() => {})
+    chrome.runtime.sendMessage({ type: 'PRIVILEGE_CHECKED', tabId, orgBaseUrl, hasPrivilege: false, unauthenticated, currentUser: null }).catch(() => {})
   }
 }
 
@@ -161,19 +176,19 @@ async function setImpersonation(tabId: number, user: User) {
   }) as unknown as Promise<void>)
 
   const state = tabState.get(tabId) ?? emptyState()
-  tabState.set(tabId, { ...state, impersonation: user })
+  saveState(tabId, { ...state, impersonated: user })
 
   chrome.action.setBadgeText({ text: getInitials(user), tabId })
   chrome.action.setBadgeBackgroundColor({ color: '#d83b01', tabId })
-  chrome.tabs.reload(tabId)
+  chrome.tabs.reload(tabId, { bypassCache: true })
 }
 
 async function clearImpersonation(tabId: number) {
   await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [tabId] }).catch(() => {})
 
   const state = tabState.get(tabId) ?? emptyState()
-  tabState.set(tabId, { ...state, impersonation: null })
+  saveState(tabId, { ...state, impersonated: null })
 
   chrome.action.setBadgeText({ text: '', tabId })
-  chrome.tabs.reload(tabId)
+  chrome.tabs.reload(tabId, { bypassCache: true })
 }

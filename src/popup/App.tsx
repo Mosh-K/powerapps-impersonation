@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { User, TabStateEntry, PopupMessage } from '../types'
 
-const VALID_HOSTS = ['.powerapps.com', '.dynamics.com']
+const VALID_HOSTS = ['apps.powerapps.com', '.dynamics.com']
 
-type UIState = 'inactive' | 'waiting' | 'checking' | 'no-privilege' | 'ready'
+type UIState = 'inactive' | 'waiting' | 'checking' | 'unauthenticated' | 'no-privilege' | 'ready'
 
 function isValidTabUrl(url: string): boolean {
   try {
@@ -18,6 +18,7 @@ function deriveUIState(tabValid: boolean, state: TabStateEntry | null): UIState 
   if (!tabValid) return 'inactive'
   if (!state?.orgBaseUrl) return 'waiting'
   if (state.hasPrivilege === null) return 'checking'
+  if (state.unauthenticated) return 'unauthenticated'
   return state.hasPrivilege ? 'ready' : 'no-privilege'
 }
 
@@ -29,7 +30,9 @@ export function App() {
   const [results, setResults] = useState<User[]>([])
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   const uiState = deriveUIState(tabValid, tabState)
 
@@ -55,9 +58,10 @@ export function App() {
       if (message.tabId !== currentTabId) return
       if (message.type === 'PRIVILEGE_CHECKED') {
         setTabState(prev => ({
-          ...(prev ?? { impersonation: null, currentUser: null }),
+          ...(prev ?? { impersonated: null, currentUser: null, unauthenticated: false }),
           orgBaseUrl: message.orgBaseUrl,
           hasPrivilege: message.hasPrivilege,
+          unauthenticated: message.unauthenticated,
           currentUser: message.currentUser,
         }))
       }
@@ -88,8 +92,28 @@ export function App() {
       setSearchError(response.error)
     } else {
       setResults(response.users)
+      setSelectedIndex(-1)
     }
   }, [tabState?.orgBaseUrl])
+
+  useEffect(() => {
+    if (selectedIndex < 0 || !resultsRef.current) return
+    const item = resultsRef.current.children[selectedIndex] as HTMLElement
+    item?.scrollIntoView({ block: 'nearest' })
+  }, [selectedIndex])
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex(i => Math.min(i + 1, results.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex(i => Math.max(i - 1, -1))
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      e.preventDefault()
+      selectUser(results[selectedIndex])
+    }
+  }
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const term = e.target.value
@@ -120,7 +144,7 @@ export function App() {
 
       {uiState === 'inactive' && (
         <div className="state">
-          <p className="status-message">Open a PowerApps or Dynamics 365 tab to activate.</p>
+          <p className="status-message">Open a PowerApps or Dynamics tab to activate.</p>
         </div>
       )}
       {uiState === 'waiting' && (
@@ -133,6 +157,13 @@ export function App() {
           <p className="status-message">Checking permissions...</p>
         </div>
       )}
+      {uiState === 'unauthenticated' && (
+        <div className="state">
+          <p className="status-message status-error">
+            Not signed in to Dynamics. Please sign in and reload the page.
+          </p>
+        </div>
+      )}
       {uiState === 'no-privilege' && (
         <div className="state">
           <p className="status-message status-error">
@@ -141,29 +172,30 @@ export function App() {
           </p>
         </div>
       )}
-      {uiState === 'ready' && !tabState?.impersonation && (
+      {uiState === 'ready' && !tabState?.impersonated && (
         <div className="state">
           <div className="search-wrapper">
             <input
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
+              onKeyDown={handleKeyDown}
               placeholder="Search by name or email..."
               autoComplete="off"
               spellCheck={false}
               autoFocus
             />
           </div>
-          <div id="search-results">
+          <div id="search-results" ref={resultsRef}>
             {searching && <div className="results-loading">Searching...</div>}
             {searchError && <div className="results-error">Error: {searchError}</div>}
             {!searching && !searchError && results.length === 0 && searchTerm.length >= 2 && (
               <div className="results-empty">No users found.</div>
             )}
-            {!searching && results.map(user => (
+            {!searching && results.map((user, i) => (
               <div
                 key={user.azureactivedirectoryobjectid}
-                className="result-item"
+                className={`result-item${i === selectedIndex ? ' selected' : ''}`}
                 onClick={() => selectUser(user)}
               >
                 <span className="result-name">{user.fullname}</span>
@@ -174,12 +206,12 @@ export function App() {
         </div>
       )}
 
-      {tabState?.impersonation && (
+      {tabState?.impersonated && (
         <div id="active-bar">
           <div className="active-info">
             <span className="active-label">Impersonating</span>
-            <span className="active-name">{tabState.impersonation.fullname}</span>
-            <span className="active-email">{tabState.impersonation.internalemailaddress}</span>
+            <span className="active-name">{tabState.impersonated.fullname}</span>
+            <span className="active-email">{tabState.impersonated.internalemailaddress}</span>
           </div>
           <button id="clear-btn" title="Stop impersonating" onClick={clearImpersonation}>✕</button>
         </div>
