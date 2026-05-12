@@ -17,7 +17,7 @@ Impersonation is per-tab and per-session — closing the tab or the browser remo
 
 ## Install from the Chrome Web Store
 
-> *(Link to be added after store submission)*
+[Install PowerApps Impersonation](https://chromewebstore.google.com/detail/powerapps-impersonation/hgmpeffocfpollhopcfckiedjfnbkpnd)
 
 ## Build from source
 
