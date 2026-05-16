@@ -45,10 +45,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (!changeInfo.url) return
   const state = tabState.get(tabId)
-  if (!state) return
-
   const newHost = new URL(changeInfo.url).hostname
-  if (state.impersonated && state.lastTopFrameHost && state.lastTopFrameHost !== newHost) {
+
+  if (state?.impersonated && state.lastTopFrameHost && state.lastTopFrameHost !== newHost) {
     await clearImpersonationSilent(tabId)
   }
 
