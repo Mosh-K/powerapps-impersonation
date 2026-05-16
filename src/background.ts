@@ -38,7 +38,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   const state = tabState.get(tabId)
   if (!state?.impersonated) return
   chrome.action.setBadgeText({ text: getInitials(state.impersonated), tabId })
-  chrome.action.setBadgeBackgroundColor({ color: '#d83b01', tabId })
+  chrome.action.setBadgeBackgroundColor({ color: colorForUser(state.impersonated), tabId })
+  chrome.action.setTitle({ title: state.impersonated.fullname, tabId })
 })
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
@@ -170,6 +171,17 @@ function getInitials(user: User): string {
   return (f + l).toUpperCase() || '?'
 }
 
+const DEFAULT_TITLE = 'PowerApps Impersonation'
+
+const BADGE_PALETTE = ['#d83b01', '#a16b3a', '#8764b8', '#b4009e', '#2d8a2d', '#6e6e6e']
+
+function colorForUser(user: User): string {
+  const id = user.azureactivedirectoryobjectid
+  let sum = 0
+  for (let i = 0; i < id.length; i++) sum += id.charCodeAt(i)
+  return BADGE_PALETTE[sum % BADGE_PALETTE.length]
+}
+
 async function setImpersonation(tabId: number, user: User) {
   // @types/chrome types this as void but Chrome returns Promise<void> at runtime
   await (chrome.declarativeNetRequest.updateSessionRules({
@@ -193,7 +205,8 @@ async function setImpersonation(tabId: number, user: User) {
   saveState(tabId, { ...state, impersonated: user })
 
   chrome.action.setBadgeText({ text: getInitials(user), tabId })
-  chrome.action.setBadgeBackgroundColor({ color: '#d83b01', tabId })
+  chrome.action.setBadgeBackgroundColor({ color: colorForUser(user), tabId })
+  chrome.action.setTitle({ title: user.fullname, tabId })
   chrome.tabs.reload(tabId, { bypassCache: true })
 }
 
@@ -204,6 +217,7 @@ async function clearImpersonationSilent(tabId: number) {
   saveState(tabId, { ...state, impersonated: null })
 
   chrome.action.setBadgeText({ text: '', tabId })
+  chrome.action.setTitle({ title: DEFAULT_TITLE, tabId })
 }
 
 async function clearImpersonation(tabId: number) {
