@@ -58,7 +58,7 @@ export function App() {
       if (message.tabId !== currentTabId) return
       if (message.type === 'PRIVILEGE_CHECKED') {
         setTabState(prev => ({
-          ...(prev ?? { impersonated: null, currentUser: null, unauthenticated: false }),
+          ...(prev ?? { impersonated: null, currentUser: null, unauthenticated: false, lastTopFrameHost: null }),
           orgBaseUrl: message.orgBaseUrl,
           hasPrivilege: message.hasPrivilege,
           unauthenticated: message.unauthenticated,

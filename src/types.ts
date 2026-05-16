@@ -12,6 +12,7 @@ export interface TabStateEntry {
   unauthenticated: boolean
   impersonated: User | null
   currentUser: User | null
+  lastTopFrameHost: string | null
 }
 
 export type BackgroundMessage =

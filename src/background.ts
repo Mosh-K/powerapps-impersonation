@@ -41,6 +41,20 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   chrome.action.setBadgeBackgroundColor({ color: '#d83b01', tabId })
 })
 
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+  if (!changeInfo.url) return
+  const state = tabState.get(tabId)
+  if (!state) return
+
+  const newHost = new URL(changeInfo.url).hostname
+  if (state.impersonated && state.lastTopFrameHost && state.lastTopFrameHost !== newHost) {
+    await clearImpersonationSilent(tabId)
+  }
+
+  const current = tabState.get(tabId) ?? emptyState()
+  saveState(tabId, { ...current, lastTopFrameHost: newHost })
+})
+
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const state = tabState.get(tabId)
   if (state?.impersonated) {
@@ -76,7 +90,7 @@ chrome.runtime.onMessage.addListener((message: BackgroundMessage, _sender, sendR
 })
 
 function emptyState(): TabStateEntry {
-  return { orgBaseUrl: null, hasPrivilege: null, unauthenticated: false, impersonated: null, currentUser: null }
+  return { orgBaseUrl: null, hasPrivilege: null, unauthenticated: false, impersonated: null, currentUser: null, lastTopFrameHost: null }
 }
 
 async function dataverseGet(orgBaseUrl: string, path: string) {
@@ -183,12 +197,16 @@ async function setImpersonation(tabId: number, user: User) {
   chrome.tabs.reload(tabId, { bypassCache: true })
 }
 
-async function clearImpersonation(tabId: number) {
+async function clearImpersonationSilent(tabId: number) {
   await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [tabId] }).catch(() => {})
 
   const state = tabState.get(tabId) ?? emptyState()
   saveState(tabId, { ...state, impersonated: null })
 
   chrome.action.setBadgeText({ text: '', tabId })
+}
+
+async function clearImpersonation(tabId: number) {
+  await clearImpersonationSilent(tabId)
   chrome.tabs.reload(tabId, { bypassCache: true })
 }
