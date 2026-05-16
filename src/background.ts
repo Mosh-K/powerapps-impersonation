@@ -56,6 +56,22 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   saveState(tabId, { ...current, lastTopFrameHost: newHost })
 })
 
+chrome.tabs.onCreated.addListener(async (tab) => {
+  if (tab.id === undefined || tab.openerTabId === undefined) return
+  const opener = tabState.get(tab.openerTabId)
+  if (!opener?.impersonated) return
+
+  saveState(tab.id, {
+    orgBaseUrl: opener.orgBaseUrl,
+    hasPrivilege: opener.hasPrivilege,
+    unauthenticated: opener.unauthenticated,
+    currentUser: opener.currentUser,
+    impersonated: opener.impersonated,
+    lastTopFrameHost: null,
+  })
+  await applyImpersonation(tab.id, opener.impersonated)
+})
+
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const state = tabState.get(tabId)
   if (state?.impersonated) {
@@ -182,7 +198,7 @@ function colorForUser(user: User): string {
   return BADGE_PALETTE[sum % BADGE_PALETTE.length]
 }
 
-async function setImpersonation(tabId: number, user: User) {
+async function applyImpersonation(tabId: number, user: User) {
   // @types/chrome types this as void but Chrome returns Promise<void> at runtime
   await (chrome.declarativeNetRequest.updateSessionRules({
     removeRuleIds: [tabId],
@@ -201,12 +217,15 @@ async function setImpersonation(tabId: number, user: User) {
     }],
   }) as unknown as Promise<void>)
 
-  const state = tabState.get(tabId) ?? emptyState()
-  saveState(tabId, { ...state, impersonated: user })
-
   chrome.action.setBadgeText({ text: getInitials(user), tabId })
   chrome.action.setBadgeBackgroundColor({ color: colorForUser(user), tabId })
   chrome.action.setTitle({ title: user.fullname, tabId })
+}
+
+async function setImpersonation(tabId: number, user: User) {
+  await applyImpersonation(tabId, user)
+  const state = tabState.get(tabId) ?? emptyState()
+  saveState(tabId, { ...state, impersonated: user })
   chrome.tabs.reload(tabId, { bypassCache: true })
 }
 
